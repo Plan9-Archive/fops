@@ -1,6 +1,5 @@
 /*
  * todo:
- * authenticated mounts
  * measure performance penalty
  * notify failed operations?
  * threads?
@@ -317,7 +316,6 @@ fsstat(Req *r)
 		respond(r, "could not retrieve stat");
 		return;
 	}
-	print("stat: %D\n", &r->d);
 	respond(r, nil);
 	fprint(ctlfd, "stat: %s\n", ((Aux*)r->fid->aux)->name);
 }
