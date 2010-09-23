@@ -168,7 +168,7 @@ fsopen(Req *r)
 	}
 
 	respond(r, nil);
-	fprint(ctlfd, "open: %s %d\n", ((Aux*)r->fid->aux)->name, r->ifcall.mode);
+	fprint(ctlfd, "open %s %d\n", ((Aux*)r->fid->aux)->name, r->ifcall.mode);
 }
 
 static void
@@ -186,7 +186,7 @@ fscreate(Req *r)
 	r->ofcall.qid = r->fid->qid;
 
 	respond(r, nil);
-	fprint(ctlfd, "create: %s %d %d\n", a->name, r->ifcall.mode, r->ifcall.perm);
+	fprint(ctlfd, "create %s %d %d\n", a->name, r->ifcall.mode, r->ifcall.perm);
 }
 
 static void
@@ -204,7 +204,7 @@ fsremove(Req *r)
 	 * If lib9p has freed r->fid->aux, a->name is wrong.
      * Instead of copying the name, we just notify before responding.
 	 */
-	fprint(ctlfd, "remove: %s\n", a->name);
+	fprint(ctlfd, "remove %s\n", a->name);
 	respond(r, nil);
 }
 
@@ -285,7 +285,7 @@ fsread(Req *r)
 	
 	r->ofcall.count = n;
 	respond(r, nil);
-	fprint(ctlfd, "read: %s %ld %lld\n", a->name, n, r->ifcall.offset);
+	fprint(ctlfd, "read %s %ld %lld\n", a->name, n, r->ifcall.offset);
 }
 
 static void
@@ -303,7 +303,7 @@ fswrite(Req *r)
 
 	r->ofcall.count = n;
 	respond(r, nil);
-	fprint(ctlfd, "write: %s %ld %lld\n", a->name, n, r->ifcall.offset);
+	fprint(ctlfd, "write %s %ld %lld\n", a->name, n, r->ifcall.offset);
 }
 
 static void
@@ -317,7 +317,7 @@ fsstat(Req *r)
 		return;
 	}
 	respond(r, nil);
-	fprint(ctlfd, "stat: %s\n", ((Aux*)r->fid->aux)->name);
+	fprint(ctlfd, "stat %s\n", ((Aux*)r->fid->aux)->name);
 }
 
 static void
@@ -330,7 +330,7 @@ fswstat(Req *r)
 		respond(r, "could not wstat");
 	else{
 		respond(r, nil);
-		fprint(ctlfd, "wstat: %s %D\n", a->name, &r->d);
+		fprint(ctlfd, "wstat %s %D\n", a->name, &r->d);
 	}
 }
 
