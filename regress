@@ -1,0 +1,37 @@
+#!/bin/rc
+
+mtpt=m
+
+if(test $#* -lt 1) {
+	echo usage: regress mountcmd
+	exit usage
+}
+
+fn fatal {
+	unmount $mtpt
+	rm -rf $mtpt
+	if(! ~ $#* 0){
+		echo $*
+		exit error
+	}
+	exit 0
+}
+
+mkdir $mtpt
+
+$* $mtpt || fatal mount
+mkdir $mtpt/dir || fatal mkdir
+
+@{ 
+	cd $mtpt/dir
+	echo -n a string > file
+	if(! ~ `{cat file} 'a string')
+		fatal read or write failed
+}
+
+if(! ~ `{ls $mtpt/dir} $mtpt/dir/file)
+	fatal ls
+ls -l $mtpt/dir/file >/dev/null || fatal ls-l
+rm -rf $mtpt/dir || fatal rm-rf
+
+fatal
