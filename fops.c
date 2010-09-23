@@ -1,5 +1,6 @@
 /*
  * todo:
+ * deal with .. in walk
  * measure performance penalty
  * notify failed operations?
  * threads?
@@ -107,14 +108,14 @@ fswalk1(Fid *fid, char *name, Qid *qid)
 
 	a = fid->aux;
 	snprint(npath, sizeof npath, "%s/%s", a->name, name);
-	
+
 	/* aux contains the parent fid info, free them */
 	free(a->name);
 	free(a);
-	fid->aux = nil;
 
 	d = dirstat(npath);
 	if(!d){
+		fid->aux = nil;
 		free(d);
 		return "file not found";
 	}
@@ -138,35 +139,20 @@ fsclone(Fid *of, Fid *nf)
 	return nil;
 }
 
-static int
-opencreate(Req *r, int creat)
-{
+static void
+fsopen(Req *r)
+{	
 	Aux *a;
 	int fd;
 
-	if(creat){
-		fd = create(r->ifcall.name, r->ifcall.mode, r->ifcall.perm);
-		a = newaux(r->ifcall.name);
-		r->fid->aux = a;
-	}else{
-		a = r->fid->aux;
-		fd = open(a->name, r->ifcall.mode);
-	}
-
-	if(fd < 0)
-		return -1;
-	a->fd = fd;
-	return 0;
-}
-
-static void
-fsopen(Req *r)
-{
-	if(opencreate(r, 0) < 0){
+	a = r->fid->aux;
+	fd = open(a->name, r->ifcall.mode);
+	if(fd < 0){
 		respond(r, "could not open");
 		return;
 	}
 
+	a->fd = fd;
 	respond(r, nil);
 	fprint(ctlfd, "open %s %d\n", ((Aux*)r->fid->aux)->name, r->ifcall.mode);
 }
@@ -175,18 +161,24 @@ static void
 fscreate(Req *r)
 {
 	Aux *a;
+	int fd;
+	char name[1024];
 
-	if(opencreate(r, 1) < 0){
-		respond(r, "could not create");
+	a = r->fid->aux;
+
+	snprint(name, sizeof name, "%s/%s", a->name, r->ifcall.name);
+	fd = create(name, r->ifcall.mode, r->ifcall.perm);
+	if(fd < 0){
+		respond(r, "create failed");
 		return;
 	}
 
-	a = r->fid->aux;
-	path2qid(a->name, &r->fid->qid);
+	a->fd = fd;
+	path2qid(estrdup9p(name), &r->fid->qid);
 	r->ofcall.qid = r->fid->qid;
 
 	respond(r, nil);
-	fprint(ctlfd, "create %s %d %d\n", a->name, r->ifcall.mode, r->ifcall.perm);
+	fprint(ctlfd, "create %s %d %uo\n", name, r->ifcall.mode, r->ifcall.perm);
 }
 
 static void
