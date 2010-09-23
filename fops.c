@@ -275,7 +275,25 @@ fsread(Req *r)
 Resp:
 	r->ofcall.count = n;
 	respond(r, nil);
-	fprint(ctlfd, "read: %s %ld\n", a->name, n);
+	fprint(ctlfd, "read: %s %ld %lld\n", a->name, n, r->ifcall.offset);
+}
+
+static void
+fswrite(Req *r)
+{
+	long n;
+	Aux *a;
+
+	a = r->fid->aux;
+	n = pwrite(a->fd, r->ifcall.data, r->ifcall.count, r->ifcall.offset);
+	if(n < 0){
+		respond(r, "read error");
+		return;
+	}
+
+	r->ofcall.count = n;
+	respond(r, nil);
+	fprint(ctlfd, "write: %s %ld %lld\n", a->name, n, r->ifcall.offset);
 }
 
 static void
@@ -301,8 +319,10 @@ fswstat(Req *r)
 	a = r->fid->aux;
 	if(dirwstat(a->name, &r->d) < 0)
 		respond(r, "could not wstat");
-	else
+	else{
 		respond(r, nil);
+		fprint(ctlfd, "wstat: %s %D\n", a->name, &r->d);
+	}
 }
 
 static void
@@ -324,6 +344,7 @@ Srv fs = {
 .open=			fsopen,
 .create=		fscreate,
 .read=			fsread,
+.write=			fswrite,
 .stat=			fsstat,
 .wstat=			fswstat,
 .destroyfid=	fsdestroyfid,
