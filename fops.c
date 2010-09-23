@@ -1,9 +1,8 @@
 /*
  * todo:
- * wstat
- * writing
  * authenticated mounts
  * measure performance penalty
+ * notify failed operations?
  * threads?
  */
 
@@ -191,6 +190,25 @@ fscreate(Req *r)
 	fprint(ctlfd, "create: %s %d %d\n", a->name, r->ifcall.mode, r->ifcall.perm);
 }
 
+static void
+fsremove(Req *r)
+{
+	Aux *a;
+
+	a = r->fid->aux;
+	if(remove(a->name) < 0){
+		respond(r, "could not remove");
+		return;
+	}
+
+	/* 
+	 * If lib9p has freed r->fid->aux, a->name is wrong.
+     * Instead of copying the name, we just notify before responding.
+	 */
+	fprint(ctlfd, "remove: %s\n", a->name);
+	respond(r, nil);
+}
+
 
 static int
 dirgen(int, Dir *rd, void *v)
@@ -257,22 +275,15 @@ fsread(Req *r)
 	Aux *a;
 
 	a = r->fid->aux;
-	if(r->fid->qid.type & QTDIR){
-		n = fsdirread(r);
-		if(n < 0){
-			respond(r, "read error");
-			return;
-		}		
-		goto Resp;
-	}
-
-	n = pread(a->fd, r->ofcall.data, r->ifcall.count, r->ifcall.offset);
+	if(r->fid->qid.type & QTDIR)
+		n = fsdirread(r);	
+	else
+		n = pread(a->fd, r->ofcall.data, r->ifcall.count, r->ifcall.offset);
 	if(n < 0){
 		respond(r, "read error");
 		return;
 	}
-
-Resp:
+	
 	r->ofcall.count = n;
 	respond(r, nil);
 	fprint(ctlfd, "read: %s %ld %lld\n", a->name, n, r->ifcall.offset);
@@ -343,6 +354,7 @@ Srv fs = {
 .clone=			fsclone,
 .open=			fsopen,
 .create=		fscreate,
+.remove=		fsremove,
 .read=			fsread,
 .write=			fswrite,
 .stat=			fsstat,
