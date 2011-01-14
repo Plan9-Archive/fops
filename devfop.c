@@ -113,7 +113,7 @@ fopgen(Chan *c, char*, Dirtab *tab, int ntab, int i, Dir *dp)
 	}
 
 	i++;	/* skip . */
-	if(tab == 0 ||  i >= ntab)
+	if(tab == 0 || i >= ntab)
 		return -1;
 
 	tab += i;
@@ -151,14 +151,18 @@ fopwalk(Chan *c, Chan *nc, char **name, int nname)
 	case Dmon:
 		/* walk to the files being monitored */
 		a = c->aux;
-		dbg("fopwalk: monitored file, dont know what to do\n");
+		dbg("fopwalk: [Dmon] walking via "), dbgchan(a->c);
+		//return nil;
 
-		wq = devtab[a->type]->walk(a->c, nc, name, nname);
+	/*	wq = devtab[a->type]->walk(a->c, nc, name, nname);
 		if(wq == nil){
 			print("could not walk\n");
 			return nil;
 		}
 		return wq;
+	*/
+		return devwalk(a->c, nc, name, nname, 0, 0, 0);
+
 	default:
 		/*
 		 * more os less a transition state, we associate
@@ -182,6 +186,7 @@ fopwalk(Chan *c, Chan *nc, char **name, int nname)
 		wq->clone->aux = a;
 		a->type = wq->clone->type;
 		a->c = tc;
+		a->c->type = a->type;
 
 		/* patch dev for new Chan in order for us to own it */
 		wq->clone->dev = Dmon;
@@ -197,8 +202,10 @@ static int
 fopstat(Chan *c, uchar *db, int n)
 {
 	Dir dir;
-	print("fopstat\n");
-	
+	Aux *a;
+
+	dbg(">> fopstat "), dbgchan(c);
+
 	switch((ulong)c->qid.path){
 	case Qroot:
 		devdir(c, c->qid, ".", 0, eve, DMDIR|0555, &dir);
@@ -210,7 +217,8 @@ fopstat(Chan *c, uchar *db, int n)
 		devdir(c, c->qid, "events", qlen((Queue*)c->aux), eve, 0600, &dir);
 		break;
 	default:
-		panic("fopstat");
+		a = c->aux;
+		return devtab[a->type]->stat(c, db, n);
 	}
 	n = convD2M(&dir, db, n);
 	if(n < BIT16SZ)
