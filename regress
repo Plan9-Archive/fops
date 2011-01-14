@@ -1,4 +1,6 @@
 #!/bin/rc
+# regression testing script, usually run with: 
+# regress fops -l listener
 
 mtpt=m
 
